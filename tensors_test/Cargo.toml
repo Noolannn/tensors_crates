@@ -1,0 +1,8 @@
+[package]
+name = "tensors_test"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tensors = { path = "../tensors"}
+tensors_macros = { path = "../tensors_macros" }
