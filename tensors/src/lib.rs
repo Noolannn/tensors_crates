@@ -1,4 +1,25 @@
-use std::ops::Index;
+use std::ops::{Add, Index, Mul};
+
+use tensors_macros::tensor;
+
+tensor!(1);
+tensor!(2);
+tensor!(3);
+tensor!(4);
+
+impl<const M: usize, T: Default + Copy + Add + Mul> From<Tensor1<M, T>> for [T; M] {
+    fn from(value: Tensor1<M, T>) -> Self {
+        value.content
+    }
+}
+
+impl<const M: usize, T: Default + Copy + Add + Mul> From<[T; M]> for Tensor1<M, T> {
+    fn from(value: [T; M]) -> Self {
+        Self {
+            content: value
+        }
+    }
+}
 
 /// M rows, N columns
 pub struct Mat<const M: usize, const N: usize, T> {
@@ -17,6 +38,22 @@ impl<const M: usize, const N: usize, T> Index<usize> for Mat<M, N, T> {
     type Output = [T; N];
     fn index(&self, index: usize) -> &Self::Output {
         &self.content[index]
+    }
+}
+
+impl<const M: usize, const N: usize, T: Default + Copy + Add + Mul> From<Tensor2<M, N, T>> for Mat<M, N, T> {
+    fn from(value: Tensor2<M, N, T>) -> Self {
+        Self {
+            content: value.content
+        }
+    }
+}
+
+impl<const D0: usize, const D1: usize, T: Default + Copy + Add + Mul> From<Mat<D0, D1, T>> for Tensor2<D0, D1, T> {
+    fn from(value: Mat<D0, D1, T>) -> Self {
+        Self {
+            content: value.content
+        }
     }
 }
 

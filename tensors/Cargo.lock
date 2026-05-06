@@ -37,6 +37,16 @@ version = "0.1.0"
 dependencies = [
  "quote",
  "syn",
+ "tensors_macros",
+]
+
+[[package]]
+name = "tensors_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
