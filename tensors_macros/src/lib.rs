@@ -313,12 +313,18 @@ pub fn tensor(input: TokenStream) -> TokenStream {
     let last_dim = dim_idents.last().unwrap().clone();
     // Create content_type, the type of the large array containing all the tensor components
     let mut content_type = syn::parse::<TypeArray>(quote! {[T; #last_dim]}.into()).unwrap();
+    // Sub array where the outer index has been "removed"
+    let mut sub_content_type_array = syn::parse::<TypeArray>(quote! {[T; #last_dim]}.into()).unwrap();
+    let trivial_content_type = syn::parse::<GenericArgument>(quote! {T}.into()).unwrap();
     // Create the default value of this array
     let mut content = syn::parse::<ExprRepeat>(quote! {[T::default(); #last_dim]}.into()).unwrap();
     for i in 1..rank {
         let current_dim = dim_idents[rank - 1 - i].clone();
         content_type = syn::parse::<TypeArray>(quote! {[#content_type; #current_dim]}.into()).unwrap();
         content = syn::parse::<ExprRepeat>(quote! {[#content; #current_dim]}.into()).unwrap();
+        if i == rank - 2 {
+            sub_content_type_array = content_type.clone();
+        }
     }
 
     // Create the list type used for indexing the tensor as tensor[[0, 1]] for example
@@ -337,6 +343,39 @@ pub fn tensor(input: TokenStream) -> TokenStream {
     }
 
     let tensor_type_ident = Ident::new(&format!("Tensor{}", rank), proc_macro2::Span::call_site());
+
+    // Token stream used for indexing with usize
+    let index_stream = if rank >= 2 {
+        quote! {
+            impl #generics Index<usize> for #tensor_type_ident #generic_bind {
+                type Output = #sub_content_type_array;
+                fn index(&self, index: usize) -> &Self::Output {
+                    & self.content[index]
+                }
+            }
+
+            impl #generics std::ops::IndexMut<usize> for #tensor_type_ident #generic_bind {
+                fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+                    &mut self.content[index]
+                }
+            }
+        }
+    } else { // rank < 2
+        quote! {
+            impl #generics Index<usize> for #tensor_type_ident #generic_bind {
+                type Output = #trivial_content_type;
+                fn index(&self, index: usize) -> &Self::Output {
+                    & self.content[index]
+                }
+            }
+
+            impl #generics std::ops::IndexMut<usize> for #tensor_type_ident #generic_bind {
+                fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+                    &mut self.content[index]
+                }
+            }
+        }
+    };
 
     quote! {
         pub struct #tensor_type_ident #generics {
@@ -370,6 +409,8 @@ pub fn tensor(input: TokenStream) -> TokenStream {
                 &mut #list_indices
             }
         }
+
+        #index_stream
     }.into()
 }
 
